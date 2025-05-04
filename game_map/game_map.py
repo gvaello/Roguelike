@@ -55,6 +55,7 @@ class GameMap:
 
         for x in range (min(x1, x2), max(x1, x2) + 1):
             self.tiles[x][y].blocked = False
+            self.tiles[x][y].block_sight = False
 
     def create_v_tunnel(self, y1, y2, x):
         y1 = int(y1)
@@ -63,12 +64,14 @@ class GameMap:
 
         for y in range (min(y1, y2), max(y1, y2) + 1):
             self.tiles[x][y].blocked = False
+            self.tiles[x][y].block_sight = False
 
     def create_room(self, room)->bool:
         for x in range(room.x1 + 1, room.x2):
             for y in range(room.y1 + 1, room.y2):
                 self.tiles[x][y].blocked = False
+                self.tiles[x][y].block_sight = False
         return True
 
     def is_blocked(self, x, y):
-        return self.tiles[x][y].blocked
+        return self.tiles[x][y].blocked or self.tiles[x][y].entity is not None
