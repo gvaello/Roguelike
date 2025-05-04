@@ -7,6 +7,7 @@ from tcod import libtcodpy
 from entity import Entity
 from fov_functions import initialize_fov, recompute_fov
 from game_map.game_map import GameMap
+from game_states import GameState
 from input_handlers import handle_keys
 from map_objects.dungeon import Dungeon
 from render_functions import render_all, clear_entities
@@ -29,8 +30,6 @@ def main():
     fov_radius = 10
     fov_recompute = True
 
-    dungeon_config = Dungeon(30, 10, 10, 6)
-
     game_map = GameMap(map_width, map_height)
 
     player_x = int(screen_width / 2)
@@ -44,12 +43,16 @@ def main():
     key = libtcodpy.Key()
     mouse = libtcodpy.Mouse()
     player = Entity(player_x, player_y, '@', libtcodpy.white)
+    entity =[player]
+    dungeon_config = Dungeon(30, 10, 10, 6, entity, 3)
 
     game_map.make_map(dungeon_config, player)
-    npc = Entity(player.x - 1, player.y - 1, 'A', libtcodpy.yellow)
+
+    npc = Entity(player.x - 1, player.y - 1, 'A', libtcodpy.yellow, 'Player')
     game_map.tiles[int(npc.x)][int(npc.y)].entity = npc
 
     fov_map = initialize_fov(game_map)
+    game_state = GameState.PLAYERS_TURN
 
     while not libtcodpy.console_is_window_closed():
 
@@ -66,7 +69,7 @@ def main():
         #libtcodpy.console_blit(blit_console, 0, 0, screen_width, screen_height, 0,0,0)
         #endregion
 
-        render_all(blit_console, screen_width, screen_height, fov_map, fov_recompute, game_map= game_map, entities=[player, npc])
+        render_all(blit_console, screen_width, screen_height, fov_map, fov_recompute, game_map= game_map, entities=dungeon_config.entities)
         libtcodpy.console_flush()
 
         #clean the player pos and put a whitespace on it
@@ -78,16 +81,23 @@ def main():
         exit_cmd = action.get("exit")
         fullscreen_cmd = action.get("fullscreen")
 
-        if move_cmd:
+        if move_cmd and game_state == GameState.PLAYERS_TURN:
             dx, dy = move_cmd
             if not game_map.is_blocked(player.x + dx, player.y + dy):
                 fov_recompute = True
                 player.move(dx, dy)
-
+            game_state = GameState.ENEMY_TURN
         if exit_cmd:
             return True
         if fullscreen_cmd:
             libtcodpy.console_set_fullscreen(not libtcodpy.console_is_fullscreen())
+
+        if game_state == GameState.ENEMY_TURN:
+            for entity in [x for x in dungeon_config.entities if x.found]:
+                if entity != player:
+                    print(f"Enemys turn, {entity.name} moves!")
+            game_state = GameState.PLAYERS_TURN
+
     return None
 
 

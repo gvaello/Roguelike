@@ -41,6 +41,10 @@ def render_game_map(game_map, con, fov_map, fov_recompute):
                     else:
                         libtcodpy.console_set_char_background(con, x, y, colors.get("light_ground"), libtcodpy.BKGND_SET)
                     game_map.tiles[x][y].explored = True
+
+                    if game_map.tiles[x][y].entity is not None:
+                        game_map.tiles[x][y].entity.found = True
+
                 elif game_map.tiles[x][y].explored:
                     if wall:
                         libtcodpy.console_set_char_background(con, x, y, colors.get("dark_wall"), libtcodpy.BKGND_SET)
@@ -56,4 +60,4 @@ def clear_entities(con, entities):
         clear_entity(con, entity)
 
 def clear_entity(con, entity):
-    libtcodpy.console_put_char(con, entity.x, entity.y, ' ', libtcodpy.BKGND_NONE)
+    libtcodpy.console_put_char(con, int(entity.x), int(entity.y), ' ', libtcodpy.BKGND_NONE)

@@ -1,5 +1,6 @@
 from random import randint, choice
-
+from tcod import libtcodpy
+from entity import Entity
 from map_objects.rectangle import Rectangle
 from map_objects.tile import Tile
 
@@ -44,6 +45,8 @@ class GameMap:
                         else:
                             self.create_v_tunnel(prev_y, new_y, prev_x)
                             self.create_h_tunnel(prev_x, new_x, new_y)
+
+                    self.place_entity(new_room, dungeon)
                     rooms.append(new_room)
                     number_of_rooms += 1
 
@@ -74,4 +77,19 @@ class GameMap:
         return True
 
     def is_blocked(self, x, y):
-        return self.tiles[x][y].blocked or self.tiles[x][y].entity is not None
+        return self.tiles[x][y].blocked or (self.tiles[x][y].entity is not None and self.tiles[x][y].entity.blocks_path)
+
+
+    def place_entity(self, room, dungeon):
+        number_of_enemies = randint(0, dungeon.max_enemies_per_room)
+        for i in range (number_of_enemies):
+            x = randint(room.x1 + 1, room.x2 - 1)
+            y = randint(room.y1 + 1, room.y2 - 1)
+            if not any([entity for entity in dungeon.entities if (int(entity.x) == x and int(entity.y) == y)]):
+                if randint(0, 100)< 80:
+                    monster = Entity(int(x), int(y) , 'o', libtcodpy.desaturated_green, 'Orc', blocks_path=True)
+                else:
+                    monster = Entity(int(x), int(y) , 's', libtcodpy.darker_green, 'Slime', blocks_path=True)
+
+                self.tiles[x][y].entity = monster
+                dungeon.entities.append(monster)
