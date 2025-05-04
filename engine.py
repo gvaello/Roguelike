@@ -5,7 +5,9 @@ from random import randint
 from tcod import libtcodpy
 
 from entity import Entity
+from fov_functions import initialize_fov, recompute_fov
 from game_map.game_map import GameMap
+from game_states import GameState
 from input_handlers import handle_keys
 from map_objects.dungeon import Dungeon
 from render_functions import render_all, clear_entities
@@ -23,7 +25,10 @@ def main():
     map_height = 50
     map_width = 70
 
-    dungeon_config = Dungeon(30, 10, 10, 6)
+    fov_algortithm = libtcodpy.FOV_RESTRICTIVE
+    fov_light_walls = True
+    fov_radius = 10
+    fov_recompute = True
 
     game_map = GameMap(map_width, map_height)
 
@@ -38,11 +43,24 @@ def main():
     key = libtcodpy.Key()
     mouse = libtcodpy.Mouse()
     player = Entity(player_x, player_y, '@', libtcodpy.white)
-    npc = Entity(player_x - 5, player_y - 5, 'A', libtcodpy.yellow)
+    entity =[player]
+    dungeon_config = Dungeon(30, 10, 10, 6, entity, 3)
 
     game_map.make_map(dungeon_config, player)
 
+    npc = Entity(player.x - 1, player.y - 1, 'A', libtcodpy.yellow, 'Player')
+    game_map.tiles[int(npc.x)][int(npc.y)].entity = npc
+
+    fov_map = initialize_fov(game_map)
+    game_state = GameState.PLAYERS_TURN
+
     while not libtcodpy.console_is_window_closed():
+
+        if fov_recompute:
+            x = int(player.x)
+            y = int(player.y)
+            recompute_fov(fov_map, x, y, fov_radius, fov_light_walls, fov_algortithm)
+
         libtcodpy.sys_check_for_event(libtcodpy.EVENT_KEY_PRESS, key, mouse)
 
         #region HOW WE USED TO CREATE ENTITIES
@@ -51,7 +69,7 @@ def main():
         #libtcodpy.console_blit(blit_console, 0, 0, screen_width, screen_height, 0,0,0)
         #endregion
 
-        render_all(blit_console, screen_width, screen_height, game_map= game_map, entities=[player, npc])
+        render_all(blit_console, screen_width, screen_height, fov_map, fov_recompute, game_map= game_map, entities=dungeon_config.entities)
         libtcodpy.console_flush()
 
         #clean the player pos and put a whitespace on it
@@ -63,15 +81,23 @@ def main():
         exit_cmd = action.get("exit")
         fullscreen_cmd = action.get("fullscreen")
 
-        if move_cmd:
+        if move_cmd and game_state == GameState.PLAYERS_TURN:
             dx, dy = move_cmd
             if not game_map.is_blocked(player.x + dx, player.y + dy):
+                fov_recompute = True
                 player.move(dx, dy)
-
+            game_state = GameState.ENEMY_TURN
         if exit_cmd:
             return True
         if fullscreen_cmd:
             libtcodpy.console_set_fullscreen(not libtcodpy.console_is_fullscreen())
+
+        if game_state == GameState.ENEMY_TURN:
+            for entity in [x for x in dungeon_config.entities if x.found]:
+                if entity != player:
+                    print(f"Enemys turn, {entity.name} moves!")
+            game_state = GameState.PLAYERS_TURN
+
     return None
 
 
